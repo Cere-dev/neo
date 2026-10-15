@@ -2487,7 +2487,6 @@ $('#author-chip').onclick = async () => {
 
 let openGeneration = 0;
 async function openBook(bookId) {
-  diskWordsAt = Date.now();
   // a book being exported from the shelf finishes first (it borrows the
   // open book's place for the moment it takes)
   while (shelfExport) await new Promise((r) => setTimeout(r, 50));
@@ -2537,6 +2536,7 @@ async function openBook(bookId) {
   spEditorMode(); // a script, or a book
 
   renderChapters();
+  wordsFromDisk(); // what the book holds is not today's writing (#345)
   renderStickies();
   migrateDarlingAnchors(); // sweep legacy invisible markers out of the prose
   reconcileMarks();        // re-adopt any note marks orphaned by cut/paste
@@ -11924,7 +11924,6 @@ function updateCounters() {
     return;
   }
   const total = bookWordCount();
-  const known = book.wordCount; // the count before this one (trackDailyWords)
   const wc = $('#word-counter');
   if (isScript()) spCounters();
   else updateBookCounters(total, wc);
@@ -11939,7 +11938,7 @@ function updateCounters() {
       requestPaint(book, bookPlainText());
     }
   }
-  trackDailyWords(total, known);
+  trackDailyWords(total);
 }
 function updateBookCounters(total, wc) {
   if (wordMode === 'book') setText(wc, t('{n} words', { n: total }));
@@ -11974,30 +11973,63 @@ function writingDay(d = new Date()) {
 }
 const todayStr = () => writingDay();
 
-// when the text last came in from disk (a book opening, another device's
-// changes adopted): a drop then isn't the writer cutting (#345)
-let diskWordsAt = 0;
-function trackDailyWords(total, known = book.wordCount) {
+// ---- daily words rules: what today's count is made of (#345) ----
+// A writing day's entry in book.json is { start, end }: end is the story's
+// count when last seen, and end − start the words written that day. Typing
+// and cutting here move that tally. Text read from disk does not: the book
+// opening, a chapter that was still syncing when it did, another device's
+// chapters taken in, its version of a chapter kept beside ours. For those
+// the start moves with the count, so the day keeps exactly what it had.
+// Plain functions of the numbers (scripts/daily-words.test.js).
+const dayWords = (e) => (e && Number.isFinite(e.start) && Number.isFinite(e.end) ? Math.max(0, e.end - e.start) : 0);
+// the day's entry once the story's count is `total`. `seen` is the count
+// the entry last saw on this page, so total − seen is the writer's own
+// typing or cutting; undefined when there's nothing of theirs to add (the
+// count came from disk). Cutting is writing too, but today never goes
+// below zero, and what's written after the cut counts in full.
+function nextDayCount(entry, total, seen) {
+  if (!entry) return { start: total, end: total };
+  let words = dayWords(entry);
+  if (typeof seen === 'number') words = Math.max(0, words + total - seen);
+  return { start: total - words, end: total };
+}
+// another device's days, from its book.json: a day it saw more written in
+// keeps that tally, against this device's own count
+function mergeDayCounts(ours, theirs) {
+  const out = { ...(ours || {}) };
+  if (!theirs || typeof theirs !== 'object') return out;
+  for (const [day, e] of Object.entries(theirs)) {
+    if (!e || !Number.isFinite(e.start) || !Number.isFinite(e.end)) continue;
+    const mine = out[day];
+    if (!mine || !Number.isFinite(mine.end)) out[day] = { start: e.start, end: e.end };
+    else if (dayWords(e) > dayWords(mine)) out[day] = { start: mine.end - dayWords(e), end: mine.end };
+  }
+  return out;
+}
+// ---- end of daily words rules ----
+
+// the story's count that today's entry last saw, and for which book
+let daySeen = null;
+// Text just came in from disk and is on the page: whatever it changed in
+// the count isn't the writer's typing. Called once the page holds it, and
+// before anything can count it as typed.
+function wordsFromDisk() {
+  if (!book) return;
+  const total = bookWordCount();
+  if (daySeen && daySeen.bookId === book.id && sprint && sprint.bookId === book.id) sprint.startCount += total - daySeen.total;
+  daySeen = { bookId: book.id, total };
+}
+function trackDailyWords(total) {
   book.dailyCounts = book.dailyCounts || {};
   const today = todayStr();
-  // a book that reads as empty for a moment (its chapters still coming in,
-  // or a synced folder still downloading them) must not set the day's start:
-  // from zero, "today" would count the whole book (#345)
-  if (!total && (known || 0) > 0) return;
-  if (!book.dailyCounts[today]) {
-    book.dailyCounts[today] = { start: total, end: total };
-    scheduleMetaSave();
-  } else if (book.dailyCounts[today].end !== total) {
-    book.dailyCounts[today].end = total;
-  }
-  // Cutting is writing too: words cut below where the day began move the
-  // day's start down with them, so today never reads below zero, and what's
-  // written after the cut counts in full. (Cut what you wrote today, and
-  // today is smaller: that part is honest.)
-  if (total < book.dailyCounts[today].start && Date.now() - diskWordsAt > 3000) {
-    book.dailyCounts[today].start = total;
-    scheduleMetaSave();
-  }
+  const was = book.dailyCounts[today];
+  const seen = daySeen && daySeen.bookId === book.id ? daySeen.total : undefined;
+  const now = nextDayCount(was, total, seen);
+  daySeen = { bookId: book.id, total };
+  book.dailyCounts[today] = now;
+  // a new day, or the writer's cut moving where it began, is saved now; the
+  // rest goes with the next save
+  if (!was || (seen !== undefined && total !== seen && now.start !== was.start)) scheduleMetaSave();
   if (sprint && sprint.bookId !== book.id) sprint = null; // a sprint belongs to the book it began in
   if (sprint && total < sprint.startCount) sprint.startCount = total;
   const wordsToday = Math.max(0, book.dailyCounts[today].end - book.dailyCounts[today].start);
@@ -12162,6 +12194,7 @@ async function keepOtherDeviceVersion(bookId, chId, disk) {
     book.chapterTitles = book.chapterTitles || {};
     book.chapterTitles[twinId] = twinChapterTitle(book.chapterTitles[chId]);
     chapterHTML[twinId] = disk;
+    wordsFromDisk(); // the other device's copy is not today's writing (#345)
     await persistChapter(twinId, disk);
     await saveMeta();
     const caret = captureCaret();
@@ -12888,7 +12921,6 @@ let refreshing = false;
 async function refreshFromDisk() {
   if (refreshing || shelfExport) return;
   refreshing = true;
-  diskWordsAt = Date.now();
   bookMetaCache.clear(); // whatever another device wrote, the next redraw reads
   try {
     if (!book) {
@@ -12959,6 +12991,10 @@ async function refreshFromDisk() {
 
     // Then decide it all in one go: nothing waits from here to the page.
     let restructured = false;
+    // the days as this device counted them, and as the other one did (#345)
+    const today = todayStr();
+    const days = mergeDayCounts(book.dailyCounts, meta.dailyCounts);
+    const dayMoved = dayWords(days[today]) !== dayWords((book.dailyCounts || {})[today]);
     if (theirs && metaSig(book) === sigHere) {
       // The other device added, renamed or moved chapters. Whichever
       // book.json stands, no chapter holding words is dropped: theirs keeps
@@ -12982,7 +13018,7 @@ async function refreshFromDisk() {
         if (mine) {
           book.chapterOrder = order;
         } else {
-          book = { ...meta, chapterOrder: order, lastPosition: book.lastPosition };
+          book = { ...meta, chapterOrder: order, lastPosition: book.lastPosition, dailyCounts: book.dailyCounts };
           savedMetaSig = metaSig(meta);
         }
         if (metaSig(book) !== savedMetaSig) scheduleMetaSave();
@@ -12991,6 +13027,7 @@ async function refreshFromDisk() {
         restructured = true;
       }
     }
+    book.dailyCounts = days;
     let sideChanged = false;
     for (const name of Object.keys(sides)) {
       const key = bookId + '/' + name;
@@ -13065,6 +13102,7 @@ async function refreshFromDisk() {
       const caret = captureCaret();
       const keepScroll = $('#paper-scroll').scrollTop;
       renderChapters();
+      wordsFromDisk(); // the words that came in were written elsewhere, or before today (#345)
       $('#paper-scroll').scrollTop = keepScroll;
       if (caret) restoreCaret(caret);
       if (restructured) {
@@ -13088,6 +13126,8 @@ async function refreshFromDisk() {
       if (conflicts) toast(t('This chapter also changed on another device. That version is saved as the chapter after it.'), 8000);
       else if (replaced.length) toast(t('Updated from your other device — the text it replaced is in Darlings'), 8000);
       else toast(t('Updated from your other device'));
+    } else if (dayMoved) {
+      updateCounters();
     }
 
     // The writer moved on to the other device since last touching this one:
@@ -13107,7 +13147,6 @@ async function refreshFromDisk() {
   } catch (err) {
     console.error(err);
   } finally {
-    diskWordsAt = Date.now();
     refreshing = false;
   }
 }
