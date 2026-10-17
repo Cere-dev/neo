@@ -14520,6 +14520,11 @@ function typewriterRoom() {
   paper.style.setProperty('--typewriter-room', Math.max(120, Math.ceil(room)) + 'px');
 }
 new ResizeObserver(() => typewriterRoom()).observe($('#chapters'));
+// the soft hyphens' ticks (non-breaking marks) follow anything that moves the words
+new ResizeObserver(() => queueSoftHyphenTicks()).observe($('#chapters'));
+$('#paper-scroll').addEventListener('scroll', () => queueSoftHyphenTicks(false), { passive: true });
+window.addEventListener('resize', () => queueSoftHyphenTicks());
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => queueSoftHyphenTicks());
 window.addEventListener('resize', typewriterRoom);
 function applyNbspMarks() {
   if (window.neo.nbspMarksState) window.neo.nbspMarksState(nbspMarksEnabled); // the Format menu's tick
@@ -16655,10 +16660,6 @@ function drawSoftHyphenTicks() {
     layer.replaceChildren(ticks);
   }
 }
-new ResizeObserver(() => queueSoftHyphenTicks()).observe($('#chapters'));
-$('#paper-scroll').addEventListener('scroll', () => queueSoftHyphenTicks(false), { passive: true });
-window.addEventListener('resize', () => queueSoftHyphenTicks());
-if (document.fonts) document.fonts.addEventListener('loadingdone', () => queueSoftHyphenTicks());
 function paraRuns(pHtml, flip) {
   const holder = document.createElement('template'); // inert: nothing loads or runs
   holder.innerHTML = pHtml;
