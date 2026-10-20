@@ -1,0 +1,18 @@
+locales/_template.json
+  h_d835bf96e9a096 560
+main.js
+  h_d835bf96e9a096 2908,3340
+app.js
+  h_d835bf96e9a096 4590
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "d9c8ad4b7a6d8109e6f9c249cb3ad5299fe9aa39",
+  "prompts": {},
+  "humans": {
+    "h_d835bf96e9a096": {
+      "author": "Aitor Cereceto <cereender@gmail.com>"
+    }
+  }
+}
