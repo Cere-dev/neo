@@ -1,0 +1,43 @@
+locales/es.json
+  s_245826f803803a::t_e0bf83d6c13e67 817
+locales/tr.json
+  s_245826f803803a::t_e0bf83d6c13e67 612
+locales/hu.json
+  s_245826f803803a::t_e0bf83d6c13e67 625
+locales/el.json
+  s_245826f803803a::t_e0bf83d6c13e67 561
+locales/ko.json
+  s_245826f803803a::t_e0bf83d6c13e67 793
+locales/de.json
+  s_245826f803803a::t_e0bf83d6c13e67 667
+locales/ro.json
+  s_245826f803803a::t_e0bf83d6c13e67 698
+locales/ru.json
+  s_245826f803803a::t_e0bf83d6c13e67 721
+locales/nl.json
+  s_245826f803803a::t_e0bf83d6c13e67 664
+locales/it.json
+  s_245826f803803a::t_e0bf83d6c13e67 667
+locales/pl.json
+  s_245826f803803a::t_e0bf83d6c13e67 703
+locales/pt.json
+  s_245826f803803a::t_e0bf83d6c13e67 667
+locales/fr.json
+  s_245826f803803a::t_e0bf83d6c13e67 669
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "95e8bc100b2900524611a4fafbb558f8dc9d946e",
+  "prompts": {},
+  "sessions": {
+    "s_245826f803803a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c671c10a-7465-4e5a-8631-1a809ad37486",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Aitor Cereceto <cereender@gmail.com>"
+    }
+  }
+}
