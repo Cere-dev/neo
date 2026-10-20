@@ -2905,7 +2905,7 @@ function buildMenu() {
         },
         ...(isMac ? [{
           more: true,
-          label: t('Press and Hold for Accents'),
+          label: t('Press and hold for accents'),
           type: 'checkbox',
           checked: pressAndHoldOn(),
           click: (item) => setPressAndHold(item.checked)
@@ -3337,7 +3337,7 @@ app.whenReady().then(() => {
     }
 
     // macOS press-and-hold: hold a letter for the accent picker. On by
-    // default; View → Press and Hold for Accents turns it off, and then held
+    // default; View → Press and hold for accents turns it off, and then held
     // keys simply repeat (the picker once re-emitted keys as phantom letters).
     if (process.platform === 'darwin') {
       try {

@@ -4587,7 +4587,7 @@ function replaceBefore(n, text) {
 // abbreviation; the same rules as capitalSlips) and, in English, "i" on its
 // own. ⌘Z (Ctrl+Z) right after keeps the lowercase. Poetry is left alone.
 let capJustSet = null; // the capital just set, for ⌘Z
-// macOS press-and-hold (View → Press and Hold for Accents): the held letter
+// macOS press-and-hold (View → Press and hold for accents): the held letter
 // must reach the system untouched, so a sentence's first letter is typed as it
 // is and capitalised at the next key, whether it stayed or the picker made é.
 let pressHoldOn = false;
