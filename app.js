@@ -2810,6 +2810,9 @@ async function chapterMenu(chId, x = 0, y = 0, from = null) {
   }
   snapshotStructure('chapter kind');
   setChapterKind(chId, choice);
+  // a part or a page leaves the story's count, and a chapter coming back
+  // joins it again: no word was written or cut, so today doesn't move (#436)
+  wordsFromDisk();
   // a copyright page starts with what every copyright page says
   if (choice === 'copyright' && !chapterText(chId).trim()) {
     chapterHTML[chId] = copyrightStarter();
@@ -13486,9 +13489,18 @@ async function structuralUndo(fromRedo) {
       displaced.push({ chId, html: cur });
     }
   }
+  // an action that only changed what a chapter is moved the story's count
+  // with no word written or cut, and so does taking it back (#436)
+  const kindNow = book.chapterKinds || {};
+  const kindsOnly = [...new Set([...Object.keys(kindNow), ...Object.keys(snap.chapterKinds || {})])].some((c) => kindNow[c] !== (snap.chapterKinds || {})[c])
+    && book.chapterOrder.length === snap.chapterOrder.length
+    && book.chapterOrder.every((c, i) => c === snap.chapterOrder[i])
+    && Object.keys(chapterHTML).length === Object.keys(restored).length
+    && Object.keys(restored).every((c) => restored[c] === chapterHTML[c]);
   book.chapterOrder = snap.chapterOrder;
   book.chapterKinds = snap.chapterKinds;
   chapterHTML = restored;
+  if (kindsOnly) wordsFromDisk();
   for (const { chId, html } of displaced) {
     const holder = document.createElement('div');
     holder.innerHTML = html;
