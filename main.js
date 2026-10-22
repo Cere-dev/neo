@@ -2177,6 +2177,9 @@ function createWindow() {
     // menu bar lives in that frame (KDE Plasma showed no menu, and Alt
     // found nothing to show)
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
+    // Linux shows the window's own icon in its title bar and task bar; an
+    // AppImage has no installed one to fall back on (#440)
+    ...(process.platform === 'linux' ? { icon: path.join(__dirname, 'build', 'icon.png') } : {}),
     backgroundColor: roomColor(libraryPageTheme()),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
