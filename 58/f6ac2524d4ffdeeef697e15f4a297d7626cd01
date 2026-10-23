@@ -1,0 +1,19 @@
+styles.css
+  s_6fb991cc3d0454::t_eef7ed9c762354 840-844
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "58f6ac2524d4ffdeeef697e15f4a297d7626cd01",
+  "prompts": {},
+  "sessions": {
+    "s_6fb991cc3d0454": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75ee18ae-a822-4c00-a3b8-7f37c8e63220",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Aitor Cereceto <cereender@gmail.com>"
+    }
+  }
+}
